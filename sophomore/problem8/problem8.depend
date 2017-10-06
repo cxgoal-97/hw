@@ -1,0 +1,25 @@
+# depslib dependency file v1.0
+1489917426 source:/home/cxdegf/workspace/data struct/problem8/problem8/main.cpp
+	<iostream>
+	"AList.h"
+
+1489913692 /home/cxdegf/workspace/data struct/problem8/problem8/AList.h
+	<iostream>
+	<assert.h>
+
+1489921277 source:/home/cxdegf/workspace/data struct/Problem8/problem8/main.cpp
+	<iostream>
+	"AList.h"
+	"LList.h"
+
+1489918494 /home/cxdegf/workspace/data struct/Problem8/problem8/AList.h
+	<iostream>
+	<assert.h>
+
+1489912983 /home/cxdegf/workspace/data struct/Problem8/problem8/LList.h
+	<iostream>
+	<assert.h>
+	"node.h"
+
+1489913023 /home/cxdegf/workspace/data struct/Problem8/problem8/node.h
+

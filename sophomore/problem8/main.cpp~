@@ -1,0 +1,54 @@
+#include <iostream>
+#include "AList.h"
+#include "LList.h"
+typedef int type;
+using namespace std;
+void intersection(LList<type> a,LList<type> b)
+{
+    a.moveToStart();
+    b.moveToStart();
+        while(1)
+        {
+	if(a.currPos()==a.length()-1){
+			break;
+		}
+	if(b.currPos()==b.length()-1)
+		break;
+    if(a.getValue()<b.getValue())
+            {
+                if(a.currPos()<a.length())
+                    a.next();
+                else
+                    break;
+            }
+            if(a.getValue()==b.getValue())
+            {
+                cout<<a.getValue()<<" ";
+                if(b.currPos()<b.length())
+                    b.next();
+                else
+                    break;
+            }
+            if(a.getValue()>b.getValue())
+            {
+                if(b.currPos()<b.length())
+                    b.next();
+                else
+                    break;
+            }
+        }
+}
+int main()
+{
+    LList<type> a,b;
+    for(int i=2;i<6;i++)
+    {
+        a.append(i);
+    }
+    for(int i=0;i<5;i++)
+    {
+        b.append(i);
+    }
+    intersection(a,b);
+    return 0;
+}

@@ -1,0 +1,41 @@
+#include <iostream>
+
+using std::endl;
+using std::cout;
+
+void print(){
+	int a;
+	std::cout<<a<<endl;
+}
+
+int main(){
+	/*
+	int month = 0257;
+	std::cout<<month<<endl;
+	std::cout<<"\115"<<endl;
+	std::cout<<"\x4d"<<endl;
+	std::cout<<L'a'<<endl;
+	std::cout<<3.14e1L<<endl;
+	
+	int a;
+	std::cout<<a<<endl;
+	for(int i=0;i<10;i++)
+		print();
+		*/
+	int a = 4;
+	int &b = a;
+	cout<<"A address is"<<&a<<endl;
+	cout<<"B address is"<<&b<<endl;
+
+	double c = 3.14;
+	const int d = c;
+	const double e = c;
+	cout<<"c address is"<<&c<<endl;
+	cout<<"d address is"<<&d<<endl;
+	cout<<"e address is"<<&e<<endl;
+
+	int null = 0,*p =null;
+	return 0;
+}
+
+

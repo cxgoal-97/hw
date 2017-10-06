@@ -1,0 +1,16 @@
+#include <iostream>
+#include <string>
+
+using std::string;
+using std::cout;
+using std::cin;
+using std::endl;
+
+
+int main(){
+	int a = 4;
+	int &b = a;
+	int arr[] = {b};
+
+	return 0;
+}

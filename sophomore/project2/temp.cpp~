@@ -1,0 +1,9 @@
+#include <iostream>
+#include <stdlib.h>
+
+int main(){
+	string h="123";
+	std::cout<<h<<endl;
+	std::cout<<atoi(h);
+	return 0;
+}

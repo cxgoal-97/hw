@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1491747106 source:/home/cxdegf/workspace/data struct/project2/main.cpp
+	<iostream>
+	"Astack.h"
+
+1491746440 /home/cxdegf/workspace/data struct/project2/Astack.h
+	"assert.h"
+
