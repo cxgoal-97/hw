@@ -55,6 +55,7 @@ int main(){
             }
         }else{
             wait(NULL);
+            // 若去掉这个sleep， 那么在实现 ls | more 的时候， 我们> 会比结果提前出来。。。。
             sleep(1);
             printf(">");
             getline(cin,in_string);
@@ -122,18 +123,21 @@ bool redirect_execv(string in_string){
 }
 
 bool pipe_execv(string in_string){
+    if(in_string.find("|")==in_string.npos)
+        normal_execv(in_string);
+
     string::size_type pos = in_string.find("|");
     string pre_order = in_string.substr(0,pos);
-
     string aim_order = in_string.substr(pos+1,in_string.size()-pos);
-
     int pipefd[2];
     pipe(pipefd);
     pid_t pid = fork();
     if(pid ==0){
         dup2(pipefd[0],0);
         close(pipefd[1]);
-        if(normal_execv(aim_order)==false)
+        //  if(normal_execv(aim_order)==false)
+        //    return false;
+        if(pipe_execv(aim_order)==false)
             return false;
     }else{
         dup2(pipefd[1],1);
