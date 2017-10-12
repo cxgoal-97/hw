@@ -41,14 +41,14 @@ int main(){
                 exit(-1);
             //  cout<<"child process"<<in_string<<"\n";
         }else{
-            if(in_string.find("&")==in_string.npos)
+            // scanf("%*[^\n]%*c");
+            if(in_string.find("&")==in_string.npos||in_string!=""){
                 wait(NULL);
+            }
             //  cout<<"parent precess"<<in_string<<"\n";
             printf(">");
             getline(cin,in_string);
-
         }
-
     }
     return 0;
 }
