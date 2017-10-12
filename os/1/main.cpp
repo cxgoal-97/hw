@@ -27,7 +27,7 @@ int main(){
     //输入Exit,就退出
     while(in_string!="Exit"){
         pid_t pid = fork();
-        if(pid < 0){
+        if(pid < 0){            //failing
             fprintf(stderr, "Fork Failed.\n");
             exit(-1);
         }else if(pid == 0 ){    //child process
@@ -35,27 +35,25 @@ int main(){
             //I/O Redirection
             if(in_string.find(">")!=in_string.npos){
                 //cout<<"Redirection\n";
-                if(redirect_execv(in_string)==false){
+                if(!redirect_execv(in_string)){
                     printf("Error\n");
                     exit(-1);
                 }
             }else if(in_string.find("|")!=in_string.npos){
                 //cout<<"Pipe\n";
-                if(pipe_execv(in_string)==false){
+                if(!pipe_execv(in_string)){
                     printf("Error\n");
                     exit(-1);
                 }
             }else{
                 //cout<<"Normal\n";
-                if(normal_execv(in_string)==false){
+                if(!normal_execv(in_string)){
                     printf("Error\n");
                     exit(-1);
                 }
             }
-        }else{
+        }else{  // parent process
             wait(NULL);
-            // 若去掉这个sleep， 那么在实现 ls | more 的时候， 我们> 会比结果提前出来。。。。
-            sleep(1);
             printf(">");
             getline(cin,in_string);
 
@@ -110,7 +108,7 @@ bool redirect_execv(string in_string){
     while(in_string[pos+1]==' ')
         pos++;
     string aim_order = in_string.substr(pos+1,in_string.size()-(1+pos));
-    cout<<aim_order<<"\n";
+
     int out;
     out = open(aim_order.c_str(), O_WRONLY | O_TRUNC |O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
     /*
@@ -120,7 +118,7 @@ bool redirect_execv(string in_string){
 
     dup2(out,1);
     close(out);
-    if(normal_execv(pre_order)==false)
+    if(!normal_execv(pre_order))
         return false;
     return true;
 }
@@ -135,17 +133,29 @@ bool pipe_execv(string in_string){
         int pipefd[2];
         pipe(pipefd);
         pid_t pid = fork();
-        if(pid ==0){
+        // 选择父进程或者子进程作为输入会导致不同的结果
+        /*
+        if(pid ==0){    //child
             dup2(pipefd[0],0);
             close(pipefd[1]);
-            //  if(normal_execv(aim_order)==false)
-            //    return false;
-            if(pipe_execv(aim_order)==false)
+            if(!pipe_execv(aim_order))
                 return false;
-        }else{
+        }else{  //parent
             dup2(pipefd[1],1);
             close(pipefd[0]);
-            if(normal_execv(pre_order)==false)
+            if(!normal_execv(pre_order))
+                return false;
+        }
+        */
+        if(pid ==0){    //child
+            dup2(pipefd[1],1);
+            close(pipefd[0]);
+            if(!normal_execv(pre_order))
+                return false;
+        }else{  //parent
+            dup2(pipefd[0],0);
+            close(pipefd[1]);
+            if(!pipe_execv(aim_order))
                 return false;
         }
     }
