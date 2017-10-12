@@ -37,9 +37,10 @@ int main(){
                 int pos = in_string.find("&");
                 in_string = in_string.substr(0,pos);
             }
-            run_cmd(in_string);
+            if(!run_cmd(in_string))
+                exit(-1);
             //  cout<<"child process"<<in_string<<"\n";
-        }else{  // parent process
+        }else{
             if(in_string.find("&")==in_string.npos)
                 wait(NULL);
             //  cout<<"parent precess"<<in_string<<"\n";
