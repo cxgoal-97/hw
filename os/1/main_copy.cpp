@@ -17,7 +17,6 @@ vector<string> split (string str);      //将字符串按照空格进行分割
 bool normal_execv (string in_string);   //正常的命令执行
 bool redirect_execv (string in_string); //重定向的实现
 bool pipe_execv (string in_string);     //pipe的实现
-bool run_cmd (string in_string);
 
 int main(){
 
@@ -26,29 +25,42 @@ int main(){
     //读入含空格的一句话
     getline(cin,in_string);
     //输入Exit,就退出
-
     while(in_string!="Exit"){
         pid_t pid = fork();
         if(pid < 0){            //failing
             fprintf(stderr, "Fork Failed.\n");
             exit(-1);
         }else if(pid == 0 ){    //child process
-            if(in_string.find("&")!=in_string.npos){
-                int pos = in_string.find("&");
-                in_string = in_string.substr(0,pos);
+
+            //I/O Redirection
+            if(in_string.find(">")!=in_string.npos){
+                //cout<<"Redirection\n";
+                if(!redirect_execv(in_string)){
+                    printf("Error\n");
+                    exit(-1);
+                }
+            }else if(in_string.find("|")!=in_string.npos){
+                //cout<<"Pipe\n";
+                if(!pipe_execv(in_string)){
+                    printf("Error\n");
+                    exit(-1);
+                }
+            }else{
+                //cout<<"Normal\n";
+                if(!normal_execv(in_string)){
+                    printf("Error\n");
+                    exit(-1);
+                }
             }
-            run_cmd(in_string);
-            //  cout<<"child process"<<in_string<<"\n";
         }else{  // parent process
-            if(in_string.find("&")==in_string.npos)
-                wait(NULL);
-            //  cout<<"parent precess"<<in_string<<"\n";
+            wait(NULL);
             printf(">");
             getline(cin,in_string);
 
         }
 
     }
+    //*/
     return 0;
 }
 
@@ -74,6 +86,7 @@ vector<string> split (string in_string){
 }
 
 bool normal_execv(string in_string){
+
     vector<string> result = split(in_string);
     const char** argv =(const char **)malloc(((int)result.size()+1)*sizeof(char *));
     for(int i = 0; i<(int)result.size(); i++)
@@ -126,6 +139,20 @@ bool pipe_execv(string in_string){
         int pipefd[2];
         pipe(pipefd);
         pid_t pid = fork();
+        // 选择父进程或者子进程作为输入会导致不同的结果
+        /*
+        if(pid ==0){    //child
+            dup2(pipefd[0],0);
+            close(pipefd[1]);
+            if(!pipe_execv(aim_order))
+                return false;
+        }else{  //parent
+            dup2(pipefd[1],1);
+            close(pipefd[0]);
+            if(!normal_execv(pre_order))
+                return false;
+        }
+        */
         if(pid ==0){    //child
             close(pipefd[0]);
             dup2(pipefd[1],STDOUT_FILENO);
@@ -137,26 +164,6 @@ bool pipe_execv(string in_string){
             close(pipefd[1]);
             if(!pipe_execv(aim_order))
                 return false;
-        }
-    }
-    return true;
-}
-
-bool run_cmd(string in_string){
-    if(in_string.find(">")!=in_string.npos){
-        if(!redirect_execv(in_string)){
-            printf("Error\n");
-            return false;
-        }
-    }else if(in_string.find("|")!=in_string.npos){
-        if(!pipe_execv(in_string)){
-            printf("Error\n");
-            return false;
-        }
-    }else{
-        if(!normal_execv(in_string)){
-            printf("Error\n");
-            return false;
         }
     }
     return true;
