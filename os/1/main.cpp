@@ -26,7 +26,6 @@ int main(){
     //读入含空格的一句话
     getline(cin,in_string);
     //输入Exit,就退出
-
     while(in_string!="Exit"){
         pid_t pid = fork();
         if(pid < 0){            //failing
@@ -41,9 +40,12 @@ int main(){
                 exit(-1);
             //  cout<<"child process"<<in_string<<"\n";
         }else{
-            // scanf("%*[^\n]%*c");
-            if(in_string.find("&")==in_string.npos||in_string!=""){
-                wait(NULL);
+            if(in_string.find("&")==in_string.npos){
+                //不阻塞子进程
+                waitpid(pid,NULL,0);
+            }else{
+                //阻塞子进程
+                waitpid(pid,NULL,WNOHANG);
             }
             //  cout<<"parent precess"<<in_string<<"\n";
             printf(">");
