@@ -1,26 +1,47 @@
 #include "single_machine_schedule.cpp"
 #include <ctime>
 
+#include <fstream>  //read the file
+#include <stdio.h>  //string to int
 /*
  * 采用 clock()函数用于计时
  *
 */
 
 int main(){
+    std::ifstream file;
+    file.open("data/50000data.txt");
+    char input[50];
+    file>>input;
     int num_of_task = 0;
-    scanf("%d", &num_of_task);
+    sscanf(input,"%d",  &num_of_task);
+    //scanf("%d", &num_of_task);
+
 
     single_machine_schedule task_set(num_of_task);
     // add the task
     int p_l=0,d_d=0;
     class task* task_p_list =(class task *)malloc(num_of_task*sizeof(class task));
+    // from txt file
+    for(int i=0; i<num_of_task; i++){
+        file>>input;
+        sscanf(input,"%d", &p_l);
+        file>>input;
+        sscanf(input,"%d", &d_d);
+        task_p_list[i] = task(i, p_l, d_d);
+        task_set.add_p_task(i, task_p_list+i);
+        printf("p_l %d d_d %d\n",p_l, d_d );
+    }
+    file.close();
+    /*
     for(int i=0; i<num_of_task; i++){
         scanf("%d %d", &p_l, &d_d);
         task_p_list[i] = task(i, p_l, d_d);
         task_set.add_p_task(i, task_p_list+i);
     }
+    */
 
-    task_set.show_all_task();
+    // task_set.show_all_task();
     clock_t begin_time=0, end_time=0;
     // the first way
     begin_time = clock();

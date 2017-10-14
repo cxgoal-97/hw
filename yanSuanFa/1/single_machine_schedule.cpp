@@ -25,11 +25,13 @@ class task{
 class single_machine_schedule{
     private:
         int num_of_task;
+        int num_of_tardy_task;
         class task** data_of_task;
         void init(int num) {num_of_task=num; data_of_task=(class task**)malloc(num*sizeof(class task*));};
     public:
         single_machine_schedule(int num){init(num);};
         int get_num_of_task(){return num_of_task;};
+        int get_num_of_tardy_task(){return num_of_tardy_task;};
         void add_p_task(int index, class task* i_task){data_of_task[index] = i_task;};
         class task* get_p_task(int index) { return data_of_task[index];};
         void spt_based_algorithm();
@@ -48,7 +50,6 @@ void single_machine_schedule::edd_based_algotithm(){
             }
         }
     }
-    // show_all_task();
 
     int L = 0;
     vector<int> taskIndex_list;   //store the index of task
@@ -72,18 +73,9 @@ void single_machine_schedule::edd_based_algotithm(){
             taskIndex_list.pop_back();
             L -= longest_time;
         }
-        /*
-        for(int i=0; i<(int)taskIndex_list.size(); i++)
-            printf("The index %d ",(int)taskIndex_list[i]);
-        printf("\n");
-        */
     }
-    // show the result
-    for(int i=0; i<(int)taskIndex_list.size(); i++){
-        class task *temp_task = get_p_task(taskIndex_list[i]);
-        printf("第%d个任务编号为 %d: p_time is %d  d_time is %d.\n",
-                i, temp_task->get_tag(), temp_task->get_preocessing_length(), temp_task->get_due_date());
-    }
+    num_of_tardy_task = num_of_task - (int)taskIndex_list.size();
+    show_all_task();
 }
 
 void single_machine_schedule::spt_based_algorithm(){
@@ -135,12 +127,9 @@ void single_machine_schedule::spt_based_algorithm(){
             taskIndex_list.assign(po_taskIndex_list.begin(), po_taskIndex_list.end());
         }
     }
+    num_of_tardy_task = num_of_task - (int)taskIndex_list.size();
     // show the result
-    for(int i=0; i<(int)taskIndex_list.size(); i++){
-        class task *temp_task = get_p_task(taskIndex_list[i]);
-        printf("第%d个任务编号为 %d: p_time is %d  d_time is %d.\n",
-                i, temp_task->get_tag(), temp_task->get_preocessing_length(), temp_task->get_due_date());
-    }
+    show_all_task();
 }
 
 void single_machine_schedule::show_all_task(){
@@ -151,3 +140,4 @@ void single_machine_schedule::show_all_task(){
 
    }
 }
+
