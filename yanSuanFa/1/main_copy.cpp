@@ -10,8 +10,7 @@
 
 int main(){
     std::ifstream file;
-    file.open("data/10000data_2.txt");
-    //file.open("data/50000data.txt");
+    file.open("data/10000data_1.txt");
     char input[50];
     file>>input;
     int num_of_task = 0;

@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/lldebf/artOfCode/hw/yanSuanFa/1/main.cpp
+single_machine_schedule.cpp
+/home/lldebf/artOfCode/hw/yanSuanFa/1/single_machine_schedule.cpp
+ctime
+-
+fstream
+-
+stdio.h
+-
+
+/home/lldebf/artOfCode/hw/yanSuanFa/1/single_machine_schedule.cpp
+iostream
+-
+algorithm
+-
+vector
+-
+stdio.h
+-
+
