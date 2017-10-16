@@ -74,6 +74,8 @@ void single_machine_schedule::edd_based_algotithm(){
                     longest_index = *(taskIndex_list.begin()+p);
                 }
             }
+            if(get_p_task(longest_index)->get_tag()==3796)
+                printf("Longest id is %d, and time is %d. dd time is %d\n",longest_index, longest_time, get_p_task(longest_index)->get_due_date());
             // delete the longest_index
             remove(taskIndex_list.begin(), taskIndex_list.end(), longest_index);
             taskIndex_list.pop_back();
@@ -83,7 +85,8 @@ void single_machine_schedule::edd_based_algotithm(){
 
     num_of_tardy_task = num_of_task - (int)taskIndex_list.size();
     printf("Tardy_task is %d\n",num_of_tardy_task);
-    for(int i=0; i<15 ; i++){
+
+    for(int i=0; i<10 ; i++){
         int index = taskIndex_list[i];
         class task* temp_task = get_p_task(index);
         printf("第%d个任务编号为 %d: p_time is %d  d_time is %d.\n",
@@ -96,7 +99,8 @@ void single_machine_schedule::spt_based_algorithm(){
     printf("Step 1 is begin, and the num of task is %d\n",num_of_task);
     //index the order by preocessing_length
     quick_sort_by_pl(0, num_of_task-1);
-    /*for(int i=0; i<15 ; i++){
+    /*
+    for(int i=0; i<15 ; i++){
         class task* temp_task = get_p_task(i);
         printf("第%d个任务编号为 %d: p_time is %d  d_time is %d.\n",
             i, temp_task->get_tag(), temp_task->get_preocessing_length(), temp_task->get_due_date());
@@ -116,7 +120,7 @@ void single_machine_schedule::spt_based_algorithm(){
 
         //insert the new task by edd order
         if((int)po_taskIndex_list.size()==0){
-            po_taskIndex_list.insert(po_taskIndex_list.begin(),0);
+            po_taskIndex_list.insert(po_taskIndex_list.begin(),i);
         }else{
             for(int j=0; j<(int)po_taskIndex_list.size(); j++){
                 if(i_task->get_due_date()<get_p_task(*(po_taskIndex_list.begin()+j))->get_due_date()){
@@ -146,9 +150,9 @@ void single_machine_schedule::spt_based_algorithm(){
     }
     num_of_tardy_task = num_of_task - (int)taskIndex_list.size();
     // show the result
-    // show_all_task();
+    //show_all_task();
     printf("Tardy task is %d.\n", num_of_tardy_task);
-    for(int i=0; i<15 ; i++){
+    for(int i=0; i<10 ; i++){
     int index = taskIndex_list[i];
         class task* temp_task = get_p_task(index);
         printf("第%d个任务编号为 %d: p_time is %d  d_time is %d.\n",
@@ -169,7 +173,7 @@ int single_machine_schedule::partion_by_pl(int l, int r){
     class task* p = get_p_task(r);
     int i = l-1;
     for (int j=l; j<r; j++){
-        if(get_p_task(j)->get_preocessing_length() < p->get_preocessing_length() ){
+        if(get_p_task(j)->get_preocessing_length() < p->get_preocessing_length()||(get_p_task(j)->get_preocessing_length()==p->get_preocessing_length()&&get_p_task(j)->get_due_date()<p->get_due_date())){
             i++;
             exchange(i, j);
         }
@@ -181,7 +185,7 @@ int single_machine_schedule::partion_by_dd(int l, int r) {
     class task* p = get_p_task(r);
     int i = l-1;
     for (int j=l; j<r; j++){
-        if(get_p_task(j)->get_due_date() < p->get_due_date() ){
+        if(get_p_task(j)->get_due_date() < p->get_due_date() ||(get_p_task(j)->get_due_date()== p->get_due_date()&&get_p_task(j)->get_preocessing_length()<p->get_preocessing_length())){
             i++;
             exchange(i, j);
         }
