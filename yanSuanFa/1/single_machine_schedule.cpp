@@ -49,12 +49,6 @@ void single_machine_schedule::edd_based_algotithm(){
     //index the order by due_date
     //Buble sort is too slow, we may ues the quick sort
     quick_sort_by_dd(0,num_of_task-1);
-    /*
-    for(int i=0; i<15 ; i++){
-        class task* temp_task = get_p_task(i);
-        printf("第%d个任务编号为 %d: p_time is %d  d_time is %d.\n",
-            i, temp_task->get_tag(), temp_task->get_preocessing_length(), temp_task->get_due_date());
-    }*/
 
     int L = 0;
     vector<int> taskIndex_list;   //store the index of task
@@ -65,21 +59,22 @@ void single_machine_schedule::edd_based_algotithm(){
         if(L > temp->get_due_date()){
             // find the longest job in the new set and we named it as k
             // delete k
-            int longest_time = 0;
+            int longest_ptime = 0;
+            int longest_dtime = 0;
             int longest_index = 0;
             for(int p=0 ; p<(int)taskIndex_list.size(); p++){
                 class task * p_task = get_p_task(*(taskIndex_list.begin()+p));
-                if(p_task->get_preocessing_length()>longest_time){
-                    longest_time = p_task->get_preocessing_length();
+                if(p_task->get_preocessing_length()>longest_ptime ||
+                        (p_task->get_preocessing_length()==longest_ptime&&p_task->get_due_date()>longest_dtime)){
+                    longest_ptime = p_task->get_preocessing_length();
+                    longest_dtime = p_task->get_due_date();
                     longest_index = *(taskIndex_list.begin()+p);
                 }
             }
-            if(get_p_task(longest_index)->get_tag()==3796)
-                printf("Longest id is %d, and time is %d. dd time is %d\n",longest_index, longest_time, get_p_task(longest_index)->get_due_date());
             // delete the longest_index
             remove(taskIndex_list.begin(), taskIndex_list.end(), longest_index);
             taskIndex_list.pop_back();
-            L -= longest_time;
+            L -= longest_ptime;
         }
     }
 
@@ -99,12 +94,6 @@ void single_machine_schedule::spt_based_algorithm(){
     printf("Step 1 is begin, and the num of task is %d\n",num_of_task);
     //index the order by preocessing_length
     quick_sort_by_pl(0, num_of_task-1);
-    /*
-    for(int i=0; i<15 ; i++){
-        class task* temp_task = get_p_task(i);
-        printf("第%d个任务编号为 %d: p_time is %d  d_time is %d.\n",
-            i, temp_task->get_tag(), temp_task->get_preocessing_length(), temp_task->get_due_date());
-    }*/
 
     // show_all_task();
     int L = 0;
@@ -122,12 +111,20 @@ void single_machine_schedule::spt_based_algorithm(){
         if((int)po_taskIndex_list.size()==0){
             po_taskIndex_list.insert(po_taskIndex_list.begin(),i);
         }else{
-            for(int j=0; j<(int)po_taskIndex_list.size(); j++){
-                if(i_task->get_due_date()<get_p_task(*(po_taskIndex_list.begin()+j))->get_due_date()){
+            int t = (int)po_taskIndex_list.size();
+            for(int j=0; j<t; j++){
+
+                int i_pl = i_task->get_preocessing_length();
+                int i_dd = i_task->get_due_date();
+                int j_pl = get_p_task(*(po_taskIndex_list.begin()+j))->get_preocessing_length();
+                int j_dd = get_p_task(*(po_taskIndex_list.begin()+j))->get_due_date();
+
+                if(i_dd<j_dd||(i_dd==j_dd&&i_pl<j_pl)){
                     po_taskIndex_list.insert(po_taskIndex_list.begin()+j, i);
                     break;
                 }
-                if(j==(int)po_taskIndex_list.size()-1){
+
+                if(j==t-1){
                     po_taskIndex_list.push_back(i);
                     // 如果去掉这个break， 会死循环， 思考一下为什么
                     break;

@@ -13,7 +13,7 @@ class single_machine_schedule load_from_txt(const char *);
 class single_machine_schedule load_from_cmd();
 int main(){
 
-    class single_machine_schedule task_set = load_from_txt("data/10000data_2.txt");
+    class single_machine_schedule task_set = load_from_txt("data/10000data_1.txt");
     // task_set.show_all_task();
     clock_t begin_time=0, end_time=0;
     // the first way
