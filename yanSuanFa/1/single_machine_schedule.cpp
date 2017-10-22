@@ -2,9 +2,11 @@
 #include<algorithm>
 #include<vector>
 #include<stdio.h>
+#include<time.h>
 
 using std::vector;
 using std::remove;
+
 
 class task{
     private:
@@ -46,9 +48,12 @@ class single_machine_schedule{
 };
 
 void single_machine_schedule::edd_based_algotithm(){
+    clock_t begin_time = clock();
+    quick_sort_by_dd(0,num_of_task-1);
+    clock_t end_time = clock();
+    printf("The time of edd sort is %lf.\n", (double)(end_time-begin_time)/CLOCKS_PER_SEC);
     //index the order by due_date
     //Buble sort is too slow, we may ues the quick sort
-    quick_sort_by_dd(0,num_of_task-1);
 
     int L = 0;
     vector<int> taskIndex_list;   //store the index of task
@@ -71,6 +76,7 @@ void single_machine_schedule::edd_based_algotithm(){
                     longest_index = *(taskIndex_list.begin()+p);
                 }
             }
+
             // delete the longest_index
             remove(taskIndex_list.begin(), taskIndex_list.end(), longest_index);
             taskIndex_list.pop_back();
@@ -79,84 +85,97 @@ void single_machine_schedule::edd_based_algotithm(){
     }
 
     num_of_tardy_task = num_of_task - (int)taskIndex_list.size();
-    printf("Tardy_task is %d\n",num_of_tardy_task);
-
+    printf("num of tardy_task is %d\n",num_of_tardy_task);
     for(int i=0; i<10 ; i++){
         int index = taskIndex_list[i];
         class task* temp_task = get_p_task(index);
         printf("第%d个任务编号为 %d: p_time is %d  d_time is %d.\n",
             i, temp_task->get_tag(), temp_task->get_preocessing_length(), temp_task->get_due_date());
     }
-
     //show_all_task();
 }
 void single_machine_schedule::spt_based_algorithm(){
     printf("Step 1 is begin, and the num of task is %d\n",num_of_task);
     //index the order by preocessing_length
+    clock_t begin_time = clock();
     quick_sort_by_pl(0, num_of_task-1);
+    clock_t end_time = clock();
+    printf("The time of spt sort is %lf.\n", (double)(end_time-begin_time)/CLOCKS_PER_SEC);
 
     // show_all_task();
-    int L = 0;
 
     printf("Step 1 is finshed.\n");
     vector<int> taskIndex_list;   //store the index of task
-    vector<int> po_taskIndex_list;
     for(int i=0; i<get_num_of_task(); i++){
+
+        int L = 0;
         class task* i_task = get_p_task(i);
-        // pre_set, it may be ok.
-        po_taskIndex_list.assign(taskIndex_list.begin(), taskIndex_list.end());
-        // 上面这句话改
+        int pro_index = 0;
+        bool feasible_tag = true;
 
         //insert the new task by edd order
-        if((int)po_taskIndex_list.size()==0){
-            po_taskIndex_list.insert(po_taskIndex_list.begin(),i);
+        if((int)taskIndex_list.size()==0){
+            taskIndex_list.insert(taskIndex_list.begin(),i);
         }else{
-            int t = (int)po_taskIndex_list.size();
-            for(int j=0; j<t; j++){
+            int num_of_list = (int)taskIndex_list.size();
+            for(int j=0; j<num_of_list; j++){
 
-                int i_pl = i_task->get_preocessing_length();
-                int i_dd = i_task->get_due_date();
-                int j_pl = get_p_task(*(po_taskIndex_list.begin()+j))->get_preocessing_length();
-                int j_dd = get_p_task(*(po_taskIndex_list.begin()+j))->get_due_date();
+                //将第j个候选元素插入集合中，按照edd顺序。
+                if(i_task->get_due_date()<get_p_task(*(taskIndex_list.begin()+j))->get_due_date()||
+                        (i_task->get_due_date()==get_p_task(*(taskIndex_list.begin()+j))->get_due_date()&&
+                         i_task->get_preocessing_length()<get_p_task(*(taskIndex_list.begin()+j))->get_preocessing_length())){
 
-                if(i_dd<j_dd||(i_dd==j_dd&&i_pl<j_pl)){
-                    po_taskIndex_list.insert(po_taskIndex_list.begin()+j, i);
+                    taskIndex_list.insert(taskIndex_list.begin()+j, i);
+                    pro_index = i;
+
+                    // check the pre_set is feasible or not
+                    // 因为在插入元素之前的元素都是按时完成的元素，
+                    // 因此只需要考虑在插入元素之后的元素的受影响情况
+                    for(int p=j; p<(int)taskIndex_list.size(); p++){
+                        class task* temp_p = get_p_task(*(taskIndex_list.begin()+p));
+                        L += temp_p->get_preocessing_length();
+                        if(L > temp_p->get_due_date())
+                            feasible_tag = false;
+                    }
                     break;
                 }
 
-                if(j==t-1){
-                    po_taskIndex_list.push_back(i);
-                    // 如果去掉这个break， 会死循环， 思考一下为什么
-                    break;
+                if(j==num_of_list-1){
+                    taskIndex_list.push_back(i);
+                    // 如果使用size(),然后去掉这个break， 会死循环， 思考一下为什么
+                    // break;
                 }
+                L += get_p_task(*(taskIndex_list.begin()+j))->get_preocessing_length();
             }
         }
 
+        /*
         // check the pre_set is feasible or not
-        bool feasible_tag = true;
-        L = 0;
-        for(int j=0; j<(int)po_taskIndex_list.size(); j++){
-            class task* temp_j = get_p_task(*(po_taskIndex_list.begin()+j));
+        L = pre_L;
+        // 因为在插入元素之前的元素都是按时完成的元素，
+        // 因此只需要考虑在插入元素之后的元素的受影响情况
+        for(int j=insert_index; j<(int)taskIndex_list.size(); j++){
+            class task* temp_j = get_p_task(*(taskIndex_list.begin()+j));
             L += temp_j->get_preocessing_length();
             if(L > temp_j->get_due_date())
                 feasible_tag = false;
         }
-        if(feasible_tag == true){
-            taskIndex_list.assign(po_taskIndex_list.begin(), po_taskIndex_list.end());
+        */
+        if(feasible_tag == false){
+            remove(taskIndex_list.begin(), taskIndex_list.end(), pro_index);
+            taskIndex_list.pop_back();
         }
     }
     num_of_tardy_task = num_of_task - (int)taskIndex_list.size();
     // show the result
     //show_all_task();
-    printf("Tardy task is %d.\n", num_of_tardy_task);
+    printf("num of tardy task is %d.\n", num_of_tardy_task);
     for(int i=0; i<10 ; i++){
     int index = taskIndex_list[i];
         class task* temp_task = get_p_task(index);
         printf("第%d个任务编号为 %d: p_time is %d  d_time is %d.\n",
             i, temp_task->get_tag(), temp_task->get_preocessing_length(), temp_task->get_due_date());
     }
-
-
 }
 void single_machine_schedule::show_all_task(){
     for(int i=0; i<num_of_task; i++){

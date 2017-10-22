@@ -1,5 +1,4 @@
 #include "single_machine_schedule.cpp"
-#include <ctime>
 
 #include <fstream>  //read the file
 #include <stdio.h>  //string to int
@@ -13,7 +12,11 @@ class single_machine_schedule load_from_txt(const char *);
 class single_machine_schedule load_from_cmd();
 int main(){
 
-    class single_machine_schedule task_set = load_from_txt("data/10000data_1.txt");
+    string file1 = "data/50000data.txt";
+    string file2 = "data/10000data_1.txt";
+    string file3 = "data/10000data_2.txt";
+
+    class single_machine_schedule task_set = load_from_txt(file2.c_str());
     // task_set.show_all_task();
     clock_t begin_time=0, end_time=0;
     // the first way
@@ -21,14 +24,14 @@ int main(){
     printf("\n\nSpt_based_algorithm.\n");
     task_set.spt_based_algorithm();
     end_time = clock();
-    printf("The of spt algorithm is %lf.\n", (double)(end_time-begin_time)/CLOCKS_PER_SEC);
+    printf("The time of spt algorithm is %lf.\n", (double)(end_time-begin_time)/CLOCKS_PER_SEC);
 
     // the second way
     begin_time = clock();
     printf("\n\nEdd_based_algorithm.\n");
     task_set.edd_based_algotithm();
     end_time = clock();
-    printf("The of edd algorithm is %lf.\n", (double)(end_time-begin_time)/CLOCKS_PER_SEC);
+    printf("The time of edd algorithm is %lf.\n", (double)(end_time-begin_time)/CLOCKS_PER_SEC);
 
     return 0;
 }
