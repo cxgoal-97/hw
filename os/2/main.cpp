@@ -8,24 +8,24 @@
 #include <stdlib.h>
 #include <errno.h>
 
-void exe_with_n_process(int** matrix_a, int** matrix_b, int n_process, int matrix_dimension,unsigned int *sum);
-int ** init_square_matrix(int matrix_dimension);
-bool clear_matrix(int ** matrix, int matrix_dimension);
-void show_matrix(int **matrix, int matrix_dimension);
-int get_ij(int i, int j, int **matrix_a, int **matrix_b, int matrix_dimension);
+void exe_with_n_process(unsigned int** matrix_a, unsigned int** matrix_b, int n_process, int matrix_dimension,unsigned int *sum);
+unsigned int ** init_square_matrix(int matrix_dimension);
+bool clear_matrix(unsigned int ** matrix, int matrix_dimension);
+void show_matrix(unsigned int **matrix, int matrix_dimension);
+unsigned int get_ij(int i, int j, unsigned int **matrix_a, unsigned int **matrix_b, int matrix_dimension);
 
 int main(){
     int matrix_dimension;           //矩阵维数
     struct timeval start,end;       //开始和结束的时间结构
-    int max_num_process=6;          //最大的进程数
+    int max_num_process=16;         //最大的进程数
     unsigned int checksum=0;        //checksum
     int sec=0, usec=0;              //sec是秒,usec是微秒
     printf("Input the matrix dimension:");
     scanf("%d", &matrix_dimension);
 
     //初始化符合要求的矩阵A和B
-    int ** matrix_a = init_square_matrix(matrix_dimension);
-    int ** matrix_b = init_square_matrix(matrix_dimension);
+    unsigned int ** matrix_a = init_square_matrix(matrix_dimension);
+    unsigned int ** matrix_b = init_square_matrix(matrix_dimension);
 
     //printf("%d", get_ij(0, 0, matrix_a, matrix_b, matrix_dimension));
     for(int n_process=1; n_process<max_num_process+1; n_process++){
@@ -40,14 +40,15 @@ int main(){
         gettimeofday(&end,0);
         sec = end.tv_sec-start.tv_sec;
         usec = end.tv_usec-start.tv_usec;
-        printf("elapsed %f ms, Checksum:%d\n", sec*1000+(usec/1000.0), checksum);
+        printf("elapsed %f sec, Checksum:%d\n", sec+(usec/1000000.0), checksum);
     }
+
     //释放申请的内存
     clear_matrix(matrix_a, matrix_dimension);
     clear_matrix(matrix_b, matrix_dimension);
 }
 
-void exe_with_n_process(int** matrix_a, int** matrix_b, int n_process, int matrix_dimension, unsigned int * sum){
+void exe_with_n_process(unsigned int** matrix_a, unsigned int** matrix_b, int n_process, int matrix_dimension, unsigned int * sum){
     //理解一下sizeof 在二维指针上的问题
     /*
      * shm_id 是申请的共享内存的编号
@@ -56,7 +57,8 @@ void exe_with_n_process(int** matrix_a, int** matrix_b, int n_process, int matri
      * buf 是用于记录时间
      * wpid 存储wait函数的返回值
      */
-    int shm_id = shmget(IPC_PRIVATE, matrix_dimension*matrix_dimension*sizeof(int), IPC_CREAT|0600);
+
+    int shm_id = shmget(IPC_PRIVATE, matrix_dimension*matrix_dimension*sizeof(unsigned int), IPC_CREAT|0600);
     int len_of_each_process = (int)matrix_dimension/n_process;
     int len_of_last_process = matrix_dimension-(n_process-1)*len_of_each_process;
 
@@ -74,7 +76,7 @@ void exe_with_n_process(int** matrix_a, int** matrix_b, int n_process, int matri
         if(pid<0){
             printf("ERROR");
         }else if(pid==0){   //child process
-            int * shm = (int *)shmat(shm_id,NULL,0);
+            int * shm = (int *)shmat(shm_id,NULL,0);    //子进程attach shm
             if(i!=n_process-1){
                 for(int p=0; p<len_of_each_process; p++){
                     for(int q=0; q<matrix_dimension; q++){
@@ -88,7 +90,7 @@ void exe_with_n_process(int** matrix_a, int** matrix_b, int n_process, int matri
                     }
                 }
             }
-            shmdt(shm);
+            shmdt(shm); //dematch the shm
             //想想为什么要这个exit
             exit(1);
         }else{  //parent process
@@ -98,7 +100,11 @@ void exe_with_n_process(int** matrix_a, int** matrix_b, int n_process, int matri
                 if(i!=n_process-1)
                     waitpid(pid,NULL,WNOHANG);
                 if(i==n_process-1){
-                    while((wpid=wait(NULL))>0);  //等待所有的子进程完成
+                    while((wpid=wait(NULL))>0){
+                        //printf("wpid is %d", wpid);
+                    }
+                    //等待所有的子进程完成
+
                     int *shm = (int *)shmat(shm_id,NULL,0);
                     *sum = 0;
                     for(int p=0; p<matrix_dimension*matrix_dimension; p++)
@@ -110,10 +116,10 @@ void exe_with_n_process(int** matrix_a, int** matrix_b, int n_process, int matri
     }
 }
 
-int ** init_square_matrix(int matrix_dimension){
-    int ** matrix = new int *[matrix_dimension];
+unsigned int ** init_square_matrix(int matrix_dimension){
+    unsigned int ** matrix = new unsigned int *[matrix_dimension];
     for(int i=0; i<matrix_dimension; i++){
-        matrix[i] = new int [matrix_dimension];
+        matrix[i] = new unsigned int [matrix_dimension];
         for(int j=0; j<matrix_dimension; j++){
             matrix[i][j] = i*matrix_dimension+j;
         }
@@ -121,7 +127,7 @@ int ** init_square_matrix(int matrix_dimension){
     return matrix;
 }
 
-void show_matrix(int ** matrix, int matrix_dimension){
+void show_matrix(unsigned int ** matrix, int matrix_dimension){
     for(int i=0; i<matrix_dimension; i++){
         for(int j=0; j<matrix_dimension; j++){
             printf("%5d",matrix[i][j]);
@@ -130,19 +136,20 @@ void show_matrix(int ** matrix, int matrix_dimension){
     }
 }
 
-int get_ij(int i, int j, int ** matrix_a, int** matrix_B, int matrix_dimension){
+unsigned int get_ij(int i, int j, unsigned int ** matrix_a, unsigned int** matrix_B, int matrix_dimension){
     //c_ij = \sum_{p=0}^{matrix_dimension}a_{ip}b_{pj}
     //a_{ip} = *(*(A+i)+p)
     //b_{pj} = *(*(B+p)+j)
-    int c_ij=0 ;
+    unsigned int c_ij=0 ;
     for(int p=0; p<matrix_dimension; p++)
         c_ij += *(*(matrix_a+i)+p)**(*(matrix_B+p)+j);
 
     return c_ij;
 }
 
-bool clear_matrix(int **matrix, int matrix_dimension){
+bool clear_matrix(unsigned int **matrix, int matrix_dimension){
     for(int i=0; i<matrix_dimension; i++)
-        delete matrix[i];
+        delete []matrix[i];
+    delete []matrix;
     return true;
 }
