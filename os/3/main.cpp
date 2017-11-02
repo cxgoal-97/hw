@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <cstring>
 #include <semaphore.h>
 #include <time.h>
 
@@ -19,14 +20,22 @@ bool SaveArrayToFile(const char *, DATATYPE* , int);
 bool Exchange(DATATYPE *, DATATYPE *);
 void BubbleSort(DATATYPE *, POSITION, POSITION);
 void ShowIntSort(int *, int );
-void ExeWithSingleThread(const char *);
-void ExeWithMultiThread(const char *);
+void ShowIntSort(int *, int , int );
+void ExeWithSingleThread(DATATYPE * arr, POSITION left, POSITION right, int inter_num);
+void ExeWithMultiThread(DATATYPE * arr, POSITION left, POSITION right, int inter_num);
 void* thread_function(void *);
 POSITION Partition(DATATYPE *, POSITION left, POSITION right);
 DATATYPE* LoadArrayFromFile(const char *, int *);
 
+using std::string;
 
 int main(){
+    string fileName = "txt";
+    int length_of_arr;
+    DATATYPE * arr = LoadArrayFromFile(fileName.c_str(), &length_of_arr);
+    ShowIntSort(arr, 0, length_of_arr-1);
+    ExeWithSingleThread(arr, 0, length_of_arr-1, 1);
+    ShowIntSort(arr, 0, length_of_arr-1);
     /*
     pthread_t thread_ID_1, thread_ID_2;
     const char str[10] = "Hellowold";
@@ -34,7 +43,7 @@ int main(){
 	void * value[2] = {(void *)str, (void *)(&number)};
     void *exit_value;
     int arr[5] = {1,4,6,3,2};
-    BubleSort(arr,5);
+    BubbleSort(arr,5);
     ShowIntSort(arr,5);
     pthread_create(&thread_ID_1, NULL, thread_function, value);
     pthread_create(&thread_ID_2, NULL, thread_function, value);
@@ -52,48 +61,52 @@ bool SaveArrayToFile(const char * filename, DATATYPE* array, int length){
     file.close();
     return true;
 }
-bool Exchange(DATATYPE *left, DATATYPE* right){
-    DATATYPE temp = *left;
-    *left = *right;
-    *right = temp;
+bool Exchange(DATATYPE *left_index, DATATYPE* right_index){
+    DATATYPE temp = *left_index;
+    *left_index = *right_index;
+    *right_index = temp;
     return true;
 }
-void BubbleSort(DATATYPE * arr, POSITION left, POSITION right){
+void BubbleSort(DATATYPE * arr, POSITION left_index, POSITION right_index){
     DATATYPE temp;
-    int length = right-left+1;
-    for(POSITION i=left; i<length-1; i++){
-        for(POSITION j=right; j<length-1-i; j++){
+    for(POSITION i=left_index; i<right_index+1; i++){
+        for(POSITION j=left_index; j<right_index+1-i; j++){
             if(*(arr+j)>*(arr+j+1)){
-                temp = *(arr+j);
-                *(arr+j) = *(arr+j+1);
-                *(arr+j+1) = temp;
+                Exchange(arr+j, arr+(j+1));
             }
         }
     }
+    ShowIntSort(arr,left_index, right_index);
 }
 void ShowIntSort(int *arr, int length){
+    printf("Array is:");
     for(int i=0; i<length; i++)
         printf("%2d ", *(arr+i));
+    printf("\n");
 }
-void ExeWithSingleThread(const char * filename){
-    int length;
-    DATATYPE* array = LoadArrayFromFile(filename, &length);
-    clock_t begin_time, end_time;
-    begin_time = clock();
-    BubbleSort(array,0,length);
-    end_time = clock();
-    std::cout<<"COMSUMING Time is "<<(double)(end_time-begin_time)/CLOCKS_PER_SEC;
-    SaveArrayToFile("output2.txt", array, length);
+
+void ShowIntSort(int *arr, int left_index, int right_index){
+    printf("Array is:");
+    for(int i=left_index; i<right_index+1; i++)
+        printf("%2d ", *(arr+i));
+    printf("\n");
+
 }
-void ExeWithMultiThread(const char * filename){
+void ExeWithSingleThread(DATATYPE * arr, POSITION left_index, POSITION right_index, int inter_num){
+    if(inter_num==0){
+        BubbleSort(arr, left_index, right_index);
+    }else{
+        POSITION pivot = Partition(arr, left_index, right_index);
+        ExeWithSingleThread(arr, left_index, pivot, inter_num-1);
+        ExeWithSingleThread(arr, pivot+1, right_index, inter_num-1);
+    }
+}
+void ExeWithMultiThread(DATATYPE * arr, POSITION left, POSITION right, int inter_num){
     int length;
 
-    DATATYPE* array = LoadArrayFromFile(filename, &length);
 
     struct ArgsOfFunction temp;
-    temp.array = array;
     temp.left = 0;
-    temp.right = length;
     temp.inter_num = 3;
 
     clock_t begin_time, end_time;
@@ -102,7 +115,6 @@ void ExeWithMultiThread(const char * filename){
     pthread_create(&thread_ID, NULL, thread_function, &temp);
     end_time = clock();
     std::cout<<"COMSUMING Time is "<<(double)(end_time-begin_time)/CLOCKS_PER_SEC;
-    SaveArrayToFile("output2.txt", array, length);
 }
 void* thread_function(void *args){
     struct ArgsOfFunction * args_value = (struct ArgsOfFunction *)args;
@@ -112,8 +124,7 @@ void* thread_function(void *args){
         return NULL;
     }else{
         sem_t binary_sem;
-        sem_init(&binary_sem, 1);
-
+        sem_init(&binary_sem,0,1);
     }
 }
 POSITION Partition(DATATYPE *arr, POSITION left, POSITION right) {
@@ -127,7 +138,6 @@ POSITION Partition(DATATYPE *arr, POSITION left, POSITION right) {
         }
         j++;
     }
-    i++;
     Exchange(arr+i, arr+right);
     return i;
 }
