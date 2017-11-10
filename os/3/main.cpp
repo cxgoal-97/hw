@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include <cstring>
 #include <semaphore.h>
-#include <time.h>
+#include <sys/time.h>
 
 #define DATATYPE int
 #define POSITION int
@@ -33,31 +33,46 @@ DATATYPE* LoadArrayFromFile(const char *, int *);
 
 using std::string;
 
+// 全局变量
 sem_t sem_main;
 sem_t sem_arr[16];
 int thread_pool_num = 15;
 
 int main(){
-    string fileName = "txt";
     int length_of_arr;
-    DATATYPE * arr = LoadArrayFromFile(fileName.c_str(), &length_of_arr);
-    ShowIntSort(arr, 0, length_of_arr-1);
-    ExeWithSingleThread(arr, 0, length_of_arr-1, 1);
-    ShowIntSort(arr, 0, length_of_arr-1);
-    ExeWithMultiThread(arr, 0, length_of_arr-1);
-    /*
-    pthread_t thread_ID_1, thread_ID_2;
-    const char str[10] = "Hellowold";
-    int number = 5;
-	void * value[2] = {(void *)str, (void *)(&number)};
-    void *exit_value;
-    int arr[5] = {1,4,6,3,2};
-    BubbleSort(arr,5);
-    ShowIntSort(arr,5);
-    pthread_create(&thread_ID_1, NULL, thread_function, value);
-    pthread_create(&thread_ID_2, NULL, thread_function, value);
-    pthread_join(thread_ID_1, &exit_value);
-    */
+    string fileName;
+    struct timeval start, end;
+    int sec=0, usec=0;
+
+    std::cout<<"Please input the name of the file\n";
+    std::cin>>fileName;
+
+    DATATYPE * arr_single = LoadArrayFromFile(fileName.c_str(), &length_of_arr);
+    DATATYPE * arr_multiple = LoadArrayFromFile(fileName.c_str(), &length_of_arr);
+    //ShowIntSort(arr_single, 0, length_of_arr-1);
+    gettimeofday(&start,0);
+    BubbleSort(arr_single, 0, length_of_arr-1);
+    gettimeofday(&end,0);
+    sec = end.tv_sec-start.tv_sec;
+    usec = end.tv_usec-start.tv_usec;
+    printf("Elapsed of Normal is %f sec.\n",sec+(usec/1000000.0));
+    //Single Thread
+    gettimeofday(&start,0);
+    ExeWithSingleThread(arr_single, 0, length_of_arr-1, 3);
+    gettimeofday(&end,0);
+    sec = end.tv_sec-start.tv_sec;
+    usec = end.tv_usec-start.tv_usec;
+    printf("Elapsed of single thread is %f sec.\n",sec+(usec/1000000.0));
+    //ShowIntSort(arr_single, 0, length_of_arr-1);
+    //Multiply Thread
+    gettimeofday(&start,0);
+    ExeWithMultiThread(arr_multiple, 0, length_of_arr-1);
+    gettimeofday(&end,0);
+    sec = end.tv_sec-start.tv_sec;
+    usec = end.tv_usec-start.tv_usec;
+    printf("Elapsed of single thread is %f sec.\n",sec+(usec/1000000.0));
+    //ShowIntSort(arr_multiple, 0, length_of_arr-1);
+    return 1;
 }
 bool SaveArrayToFile(const char * filename, DATATYPE* array, int length){
     std::fstream file;
@@ -102,8 +117,9 @@ void ExeWithSingleThread(DATATYPE * arr, POSITION left_index, POSITION right_ind
         BubbleSort(arr, left_index, right_index);
     }else{
         POSITION pivot = Partition(arr, left_index, right_index);
-        ExeWithSingleThread(arr, left_index, pivot, inter_num-1);
+        ExeWithSingleThread(arr, left_index, pivot-1, inter_num-1);
         ExeWithSingleThread(arr, pivot+1, right_index, inter_num-1);
+        printf("%d is %d\n", left_index, right_index);
     }
 }
 void ExeWithMultiThread(DATATYPE * arr, POSITION left_index, POSITION right_index){
@@ -129,7 +145,9 @@ void ExeWithMultiThread(DATATYPE * arr, POSITION left_index, POSITION right_inde
     for(int i=0; i<15; i++)
         pthread_create(p_id+i, NULL, thread_function, (void *)(arrOfArgsOfFunction+i));
     sem_post(sem_arr+0);
+    printf("Multiply Thread start.\n");
     sem_wait(&sem_main);
+    printf("Finished the multiThread sort.\n");
 }
 void * thread_function(void * args){
     //init the data;
@@ -139,19 +157,20 @@ void * thread_function(void * args){
     //block until the signal
     sem_wait(sem_arr+thread_num);
 
-    if(thread_num>=7&&thread_num<=14)
+    if(thread_num>=7&&thread_num<=14){
         BubbleSort(arr->array, arr->left, arr->right);
-    else{
+        printf("The thread num is %d\n", thread_num );
+    }else{
         POSITION p = Partition(arr->array, arr->left, arr->right);
         int thread_num_l = thread_num*2+1;
         int thread_num_r = thread_num*2+2;
-        std::cout<<thread_num_l<<"     "<<thread_num_r<<"\n";
         ((struct Array *)(args_of_thread->arr_of_struct)+thread_num_l)->right = p;
         ((struct Array *)(args_of_thread->arr_of_struct)+thread_num_r)->left = p;
+        printf("The thread num is %d, num_l is %d, num_r is %d\n", thread_num, thread_num_l, thread_num_r);
         sem_post(sem_arr+thread_num_r);
         sem_post(sem_arr+thread_num_l);
     }
-    std::cout<<"Thread num is"<<thread_num<<std::endl;
+    //std::cout<<"Thread num is"<<thread_num<<std::endl;
     if((--thread_pool_num)==0)
         sem_post(&sem_main);
 }
@@ -168,8 +187,8 @@ POSITION Partition(DATATYPE *arr, POSITION left, POSITION right) {
         }
         j++;
     }
-    Exchange(arr+i, arr+right);
-    return i;
+    Exchange(arr+1+i, arr+right);
+    return ++i;
 }
 DATATYPE* LoadArrayFromFile(const char * filename, int * length){
     std::fstream file;
