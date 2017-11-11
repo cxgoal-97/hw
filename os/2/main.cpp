@@ -40,7 +40,7 @@ int main(){
         gettimeofday(&end,0);
         sec = end.tv_sec-start.tv_sec;
         usec = end.tv_usec-start.tv_usec;
-        printf("elapsed %f sec, Checksum:%d\n", sec+(usec/1000000.0), checksum);
+        printf("elapsed %f sec, Checksum:%u\n", sec+(usec/1000000.0), checksum);
     }
 
     //释放申请的内存
@@ -91,7 +91,6 @@ void exe_with_n_process(unsigned int** matrix_a, unsigned int** matrix_b, int n_
                 }
             }
             shmdt(shm); //dematch the shm
-            //想想为什么要这个exit
             exit(1);
         }else{  //parent process
                 if(getppid()==1)
@@ -104,7 +103,6 @@ void exe_with_n_process(unsigned int** matrix_a, unsigned int** matrix_b, int n_
                         //printf("wpid is %d", wpid);
                     }
                     //等待所有的子进程完成
-
                     int *shm = (int *)shmat(shm_id,NULL,0);
                     *sum = 0;
                     for(int p=0; p<matrix_dimension*matrix_dimension; p++)
