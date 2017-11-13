@@ -41,11 +41,12 @@ int main(){
             //  cout<<"child process"<<in_string<<"\n";
         }else{
             if(in_string.find("&")==in_string.npos){
-                //不阻塞子进程
+                //阻塞子进程
                 waitpid(pid,NULL,0);
             }else{
-                //阻塞子进程
-                waitpid(pid,NULL,WNOHANG);
+                //不阻塞子进程
+                waitpid(pid,NULL,1);
+                signal(SIGCHLD, SIG_IGN);
             }
             //  cout<<"parent precess"<<in_string<<"\n";
             printf(">");
