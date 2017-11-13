@@ -1,3 +1,29 @@
+/*
+#                       _oo0oo_
+#                      o8888888o
+#                      88" . "88
+#                      (| -_- |)
+#                      0\  =  /0
+#                    ___/`---'\___
+#                  .' \\|     |# '.
+#                 / \\|||  :  |||# \
+#                / _||||| -:- |||||- \
+#               |   | \\\  -  #/ |   |
+#               | \_|  ''\---/''  |_/ |
+#               \  .-\__  '-'  ___/-. /
+#             ___'. .'  /--.--\  `. .'___
+#          ."" '<  `.___\_<|>_/___.' >' "".
+#         | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+#         \  \ `_.   \_ __\ /__ _/   .-` /  /
+#     =====`-.____`.___ \_____/___.-`___.-'=====
+#                       `=---='
+#
+#
+#     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#               佛祖保佑         永无BUG
+*/
+
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
@@ -34,9 +60,8 @@ DATATYPE* LoadArrayFromFile(const char *, int *);
 using std::string;
 
 // 全局变量
-sem_t sem_main;
 sem_t sem_arr[16];
-int thread_pool_num = 15;
+sem_t sem_main;
 
 int main(){
     int length_of_arr;
@@ -49,13 +74,7 @@ int main(){
 
     DATATYPE * arr_single = LoadArrayFromFile(fileName.c_str(), &length_of_arr);
     DATATYPE * arr_multiple = LoadArrayFromFile(fileName.c_str(), &length_of_arr);
-    //ShowIntSort(arr_single, 0, length_of_arr-1);
-    gettimeofday(&start,0);
-    BubbleSort(arr_single, 0, length_of_arr-1);
-    gettimeofday(&end,0);
-    sec = end.tv_sec-start.tv_sec;
-    usec = end.tv_usec-start.tv_usec;
-    printf("Elapsed of Normal is %f sec.\n",sec+(usec/1000000.0));
+
     //Single Thread
     gettimeofday(&start,0);
     ExeWithSingleThread(arr_single, 0, length_of_arr-1, 3);
@@ -72,6 +91,12 @@ int main(){
     usec = end.tv_usec-start.tv_usec;
     printf("Elapsed of single thread is %f sec.\n",sec+(usec/1000000.0));
     //ShowIntSort(arr_multiple, 0, length_of_arr-1);
+    int tag=0;
+    for (int i=0; i<100000; i++){
+        if(*(arr_single+i)!=*(arr_multiple+i))
+            tag = 1;
+    }
+    printf("%d ", tag);
     return 1;
 }
 bool SaveArrayToFile(const char * filename, DATATYPE* array, int length){
@@ -114,12 +139,13 @@ void ShowIntSort(int *arr, int left_index, int right_index){
 }
 void ExeWithSingleThread(DATATYPE * arr, POSITION left_index, POSITION right_index, int inter_num){
     if(inter_num==0){
+        printf("L %6d R  %6d\n", left_index, right_index);
         BubbleSort(arr, left_index, right_index);
     }else{
+        printf("L %6d R  %6d\n", left_index, right_index);
         POSITION pivot = Partition(arr, left_index, right_index);
         ExeWithSingleThread(arr, left_index, pivot-1, inter_num-1);
         ExeWithSingleThread(arr, pivot+1, right_index, inter_num-1);
-        printf("%d is %d\n", left_index, right_index);
     }
 }
 void ExeWithMultiThread(DATATYPE * arr, POSITION left_index, POSITION right_index){
@@ -147,48 +173,54 @@ void ExeWithMultiThread(DATATYPE * arr, POSITION left_index, POSITION right_inde
     sem_post(sem_arr+0);
     printf("Multiply Thread start.\n");
     sem_wait(&sem_main);
-    printf("Finished the multiThread sort.\n");
 }
 void * thread_function(void * args){
     //init the data;
     struct Args_of_function * args_of_thread = (struct Args_of_function *) args;
     int thread_num = args_of_thread->thread_num;
-    struct Array* arr = *((struct Array**)(args_of_thread->arr_of_struct)+thread_num);
+    struct Array* arr = *(args_of_thread->arr_of_struct+thread_num);
     //block until the signal
     sem_wait(sem_arr+thread_num);
 
     if(thread_num>=7&&thread_num<=14){
         BubbleSort(arr->array, arr->left, arr->right);
-        printf("The thread num is %d\n", thread_num );
+        sem_post(sem_arr+0);
     }else{
         POSITION p = Partition(arr->array, arr->left, arr->right);
         int thread_num_l = thread_num*2+1;
         int thread_num_r = thread_num*2+2;
-        ((struct Array *)(args_of_thread->arr_of_struct)+thread_num_l)->right = p;
-        ((struct Array *)(args_of_thread->arr_of_struct)+thread_num_r)->left = p;
-        printf("The thread num is %d, num_l is %d, num_r is %d\n", thread_num, thread_num_l, thread_num_r);
+        (*((args_of_thread->arr_of_struct)+thread_num_l))->left = arr->left;
+        (*((args_of_thread->arr_of_struct)+thread_num_l))->right = p-1;
+        (*((args_of_thread->arr_of_struct)+thread_num_r))->left = p+1;
+        (*((args_of_thread->arr_of_struct)+thread_num_r))->right = arr->right;
         sem_post(sem_arr+thread_num_r);
         sem_post(sem_arr+thread_num_l);
     }
-    //std::cout<<"Thread num is"<<thread_num<<std::endl;
-    if((--thread_pool_num)==0)
+    if(thread_num==0){  //T1等待所有的底层线程
+        for(int i=0; i<8; i++)
+            sem_wait(sem_arr+0);
         sem_post(&sem_main);
+    }
+    printf("T%d is finished\n", 1+thread_num);
+    //std::cout<<"Thread num is"<<thread_num<<std::endl;
+    return NULL;
 }
 
 
 POSITION Partition(DATATYPE *arr, POSITION left, POSITION right) {
     DATATYPE pivot = *(arr+right);
-    POSITION i = left;
+    POSITION i = left-1;
     POSITION j = left;
     while (j < right) {
-        if (*(arr + j) < pivot) {
-            Exchange(arr+i, arr+j);
+        if (*(arr + j) <= pivot) {
             i++;
+            Exchange(arr+i, arr+j);
         }
         j++;
     }
-    Exchange(arr+1+i, arr+right);
-    return ++i;
+    i++;
+    Exchange(arr+i, arr+right);
+    return i;
 }
 DATATYPE* LoadArrayFromFile(const char * filename, int * length){
     std::fstream file;
