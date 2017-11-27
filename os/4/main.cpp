@@ -65,16 +65,18 @@ DATATYPE* LoadArrayFromFile(const char *, int *);               //Load array fro
 void WriteArrayToFile(const char *, int *, int );               //Write array to the file
 void * thread_function(void *);                                 //线程使用的函数
 void exec_function(struct Args_of_task );                      //本题中具体使用的函数
-struct Args_of_task GetTaskFromQueue();
-void AddTaskToQueue(struct Args_of_task);
+struct Args_of_task GetTaskFromQueue();                         //从任务队列中获得任务
+void AddTaskToQueue(struct Args_of_task);                       //添加任务到任务队列中
+int GetSizeOfQueue();                                           //获得当前任务队列的大小
 
 // 全局变量
 const int MAX_SIZE_OF_THREAD_POOL = 8;      //本题中，线程池中线程的最大数目
 const int MAX_DEEP_LAYER=3;                 //本题中，最深的层数，层数从0开始
 sem_t sem_arr[MAX_SIZE_OF_THREAD_POOL];     //线程使用的信号量
-sem_t sem_mutex;
+sem_t sem_mutex;                            //用于任务序列操作的锁
+sem_t sem_mutex4depp;                       //用于记录底层排序的锁
 int num_of_live_thread;                     //正在运行的线程数
-int num_deepest;
+int num_deepest;                            //底层任务完成情况的记录
 struct Args_of_thread thread_pool[MAX_SIZE_OF_THREAD_POOL]; //线程池
 queue<struct Args_of_task> task_queue;     //初始化任务序列
 
@@ -84,6 +86,7 @@ int main(){
     struct timeval start, end;
     int sec=0, usec=0;
     sem_init(&sem_mutex, 0, 0);
+    sem_init(&sem_mutex4depp, 0, 0);
 
     //Input the fileName
     std::cout<<"Please input the name of the file\n";
@@ -100,7 +103,7 @@ int main(){
         pthread_create(p_id+i, NULL, thread_function, (void *)(thread_pool+i));
     }
     //Multiply Thread
-    for(int max_thread_num=2; max_thread_num<MAX_SIZE_OF_THREAD_POOL; max_thread_num++){
+    for(int max_thread_num=MAX_SIZE_OF_THREAD_POOL-1; max_thread_num<MAX_SIZE_OF_THREAD_POOL; max_thread_num++){
         DATATYPE * arr_multiple = LoadArrayFromFile(fileName.c_str(), &length_of_arr);
         gettimeofday(&start,0);
         ExeWithMultiThread(arr_multiple, max_thread_num, 0, length_of_arr-1);
@@ -121,10 +124,10 @@ void * thread_function(void * args){
     printf("%d等待\n", args_of_thread->id);
     while(1){
         sem_wait(args_of_thread->sem_id); //进入休眠模式，直到有任务激活
-        printf("%d激活\n", args_of_thread->id);
+        printf("线程%d激活, 执行Id 为%d\n", args_of_thread->id, args_of_thread->args_of_function.task_id);
         num_of_live_thread++;
         exec_function(args_of_thread->args_of_function);
-        printf("%d结束,再次进入休眠状态\n", args_of_thread->id);
+        printf("线程%d结束,再次进入休眠状态\n", args_of_thread->id);
         num_of_live_thread--;
     }
 }
@@ -149,7 +152,7 @@ void BubbleSort(DATATYPE * arr, POSITION left_index, POSITION right_index){
     gettimeofday(&end,0);
     sec = end.tv_sec-start.tv_sec;
     usec = end.tv_usec-start.tv_usec;
-    printf("%f sec.",sec+(usec/1000000.0));
+    printf("冒泡排序完成%f sec.     ",sec+(usec/1000000.0));
     printf("%p Left Index is %d, Right Index is %d.\n",arr, left_index, right_index);
 }
 void ShowIntSort(int *arr, int length){
@@ -200,8 +203,9 @@ void ExeWithMultiThread(DATATYPE * arr, int max_thread_num,
     }*/
 
     //Start the first task
+    int size;       //用于存放任务队列的容量
     while(num_deepest){
-        int size = (int)task_queue.size();
+        size = GetSizeOfQueue();
         if(size){   //当前任务队列非空
             printf("当前任务队列的容量%d\n", size);
             /*
@@ -209,28 +213,29 @@ void ExeWithMultiThread(DATATYPE * arr, int max_thread_num,
             task_queue.pop();
             */
             struct Args_of_task pre_ = GetTaskFromQueue();
-            size = (int)task_queue.size();
+            size = GetSizeOfQueue();
             printf("当前执行的task，arr is %p, length is %d  \n\
                     id is %d layer is %d\n", pre_.element_arr, pre_.length, pre_.task_id, pre_.layer);
-            printf("Get task 之后任务队列容量%d\n", size);
+            printf("把任务拿走后任务队列容量%d\n", size);
             //Find sleep thread to active
-            for(int i=0; ;i++){
+            int i=0;
+            for(; ;i++){
+                //printf("开始查找休眠进程.\n");
                 i = i % max_thread_num;
                 //printf("Find thread\n");
                 int flag; // If flag = 0; Thread is sleep
                 sem_getvalue(thread_pool[i].sem_id, &flag);
                 if(flag==0){//找到处于休眠模式的进程
-                    printf("Flag is %d,thread %d is selected.\n",flag, i);
+                    printf("线程%d被选中用于执行程序 ID %d.\n",i, pre_.task_id);
                     thread_pool[i].args_of_function = pre_;
                     sem_post(thread_pool[i].sem_id);
-                    printf("%d is running. 当前的num_deepest 为%d\n", i, num_deepest);
+                    printf("线程%d is running. 当前的num_deepest 为%d\n", i, num_deepest);
                     break;
                 }
             }
         }
         //printf("Loop finished\n");
     };
-    printf("当前的num_deepest 为%d\n",  num_deepest);
 }
 void exec_function(struct Args_of_task  args){
     //init the data;
@@ -238,42 +243,88 @@ void exec_function(struct Args_of_task  args){
     POSITION left = 0;
     POSITION right = args.length-1;
     int layer = args.layer;
-    if(args.length==1){
+    int id = args.task_id;
+
+    int value;      //记录num锁的数值
+    if(right==0){
         if(layer==MAX_DEEP_LAYER){
-            num_deepest--;
+            while(1){
+                sem_getvalue(&sem_mutex4depp, &value);
+                if(value==0){//空闲
+                    sem_post(&sem_mutex4depp);  //加锁
+                    num_deepest--;
+                    sem_wait(&sem_mutex4depp);  //解锁
+                    break;
+                }
+            }
+            printf("当前的num_deepest 为%d\n",  num_deepest);
             //Do Nothing
         }else{
-            struct Args_of_task arg_left;
-            arg_left.element_arr = arr;
-            arg_left.length = 1;
-            arg_left.layer = layer+1;
-            arg_left.task_id = args.task_id*2+1;
-            AddTaskToQueue(arg_left);
+            struct Args_of_task task_left, task_right;
+            task_left.element_arr = arr;
+            task_left.length = 1;
+            task_left.layer = layer+1;
+            task_left.task_id = id*2+1;
+            task_right.length = 0;
+            task_right.task_id = id*2+2;
+            AddTaskToQueue(task_left);
+            AddTaskToQueue(task_right);
         }
-    }else if(args.length==0){
-        if(layer==MAX_DEEP_LAYER)
-            num_deepest--;
+    }else if(right==-1){
+        if(layer==MAX_DEEP_LAYER){
+                while(1){
+                sem_getvalue(&sem_mutex4depp, &value);
+                if(value==0){//空闲
+                    sem_post(&sem_mutex4depp);  //加锁
+                    num_deepest--;
+                    sem_wait(&sem_mutex4depp);  //解锁
+                    break;
+                }
+            }
+            printf("当前的num_deepest 为%d\n",  num_deepest);
+        }else{
+            struct Args_of_task task_left, task_right;
+            task_left.length = 0;
+            task_left.task_id = id*2+1;
+            task_right.length = 0;
+            task_right.task_id = id*2+2;
+            AddTaskToQueue(task_left);
+            AddTaskToQueue(task_right);
+        }
         //Do Nothing
     }else{
         if(layer==MAX_DEEP_LAYER){
             BubbleSort(arr, left, right);
-            num_deepest--;
+            while(1){
+                sem_getvalue(&sem_mutex4depp, &value);
+                if(value==0){//空闲
+                    sem_post(&sem_mutex4depp);  //加锁
+                    num_deepest--;
+                    sem_wait(&sem_mutex4depp);  //解锁
+                    break;
+                }
+            }
+            printf("当前的num_deepest 为%d\n",  num_deepest);
         }else{
             POSITION p = Partition(arr, left, right);
-            printf("%p Left is %d Right is %d P is %d\n",arr, left, right,  p);
+            printf("id %d Partition部分结束  \n \
+                    %p Left is %d Right is %d P is %d\n",id ,arr, left, right,  p);
             //Product two new task
             struct Args_of_task task_left,task_right;
             task_left.element_arr = arr;
             task_left.length = p;
             task_left.layer = layer+1;
-            task_left.task_id = args.task_id*2+1;
-            AddTaskToQueue(task_left);
+            task_left.task_id = id*2+1;
             task_right.element_arr = arr+p;
             task_right.length = right-p+1;
             task_right.layer = layer+1;
-            task_right.task_id = args.task_id*2+2;
+            task_right.task_id = id*2+2;
+            AddTaskToQueue(task_left);
             AddTaskToQueue(task_right);
-            printf("插入任务之后，当前任务容量%d.\n",(int) task_queue.size());
+            int size = GetSizeOfQueue();
+            printf("添加的任务 %p, 长度为 %d, id为 %d, 层数 %d\n", task_left.element_arr, task_left.length, task_left.task_id, task_left.layer);
+            printf("添加的任务 %p, 长度为 %d, id为 %d, 层数 %d\n", task_right.element_arr, task_right.length, task_right.task_id, task_right.layer);
+            printf("id为%d完成后,插入任务，当前任务容量%d.\n",id, size);
         }
     }
 }
@@ -321,9 +372,9 @@ void WriteArrayToFile(const char * filename, int * array, int length){
 
 struct Args_of_task GetTaskFromQueue(){
     int value;
-    sem_getvalue(&sem_mutex, &value);
     struct Args_of_task re;
     while(1){
+        sem_getvalue(&sem_mutex, &value);
         if(value==0){       //空闲
             sem_post(&sem_mutex);   //上锁
             re = task_queue.front();
@@ -331,21 +382,33 @@ struct Args_of_task GetTaskFromQueue(){
             sem_wait(&sem_mutex);   //解锁
             break;
         }
-        sem_getvalue(&sem_mutex, &value);
     }
     return re;
 }
 
 void AddTaskToQueue(struct Args_of_task task){
     int value;
-    sem_getvalue(&sem_mutex, &value);
     while(1){
+        sem_getvalue(&sem_mutex, &value);
         if(value==0){//空闲
             sem_post(&sem_mutex);   //上锁
             task_queue.push(task);
             sem_wait(&sem_mutex);   //解锁
             break;
         }
+    }
+}
+
+int GetSizeOfQueue(){
+    int value;
+    int size;
+    while(1){
         sem_getvalue(&sem_mutex, &value);
+        if(value==0){//空闲
+            sem_post(&sem_mutex);//上锁
+            size = (int)task_queue.size();
+            sem_wait(&sem_mutex);//解锁
+            return size;
+        }
     }
 }
