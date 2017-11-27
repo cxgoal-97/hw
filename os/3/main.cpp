@@ -64,7 +64,6 @@ using std::string;
 sem_t sem_arr[16];
 sem_t sem_main;
 struct Args_of_function args_arr[15];
-int length[15];
 
 
 int main(){
@@ -96,10 +95,16 @@ int main(){
     //ShowIntSort(arr_multiple, 0, length_of_arr-1);
     // Check the result of two ways is same
     int tag=0;
-    for (int i=0; i<length_of_arr; i++){
+    for (int i=0; i<length_of_arr-1; i++){
         if(*(arr_single+i)!=*(arr_multiple+i)){
             printf("Different id is %d\n",i);
             tag=1;
+        }
+        if(*(arr_single+i)>*(arr_single+i+1)){
+            printf("%d\n",*(arr_single+i-1));
+            printf("%d\n",*(arr_single+i));
+            printf("%d\n",*(arr_single+i+1));
+            printf("%d\n", i);
         }
     }
 
@@ -128,8 +133,8 @@ void BubbleSort(DATATYPE * arr, POSITION left_index, POSITION right_index){
     struct timeval start, end;
     int sec=0, usec=0;
     gettimeofday(&start,0);
-    for(POSITION i=left_index; i<right_index+1; i++){
-        for(POSITION j=left_index; j<right_index+1-(i-left_index); j++){
+    for(POSITION i=left_index; i<right_index; i++){
+        for(POSITION j=left_index; j<right_index-(i-left_index); j++){
             if(*(arr+j)>*(arr+j+1)){
                 Exchange(arr+j, arr+(j+1));
             }
@@ -150,7 +155,10 @@ void BubbleSort(DATATYPE * arr, int length){
     for(POSITION i=0; i<length; i++){
         for(POSITION j=0; j<length-i; j++){
             if(*(arr+j)>*(arr+j+1)){
-                Exchange(arr+j, arr+(j+1));
+               // Exchange(arr+j, arr+(j+1));
+                DATATYPE temp = *(arr+j+1);
+                *(arr+j+1) = *(arr+j);
+                *(arr+j) = temp;
             }
         }
     }
@@ -183,13 +191,16 @@ void ExeWithSingleThread(DATATYPE * arr, POSITION left_index, POSITION right_ind
         if(right_index>left_index){
             POSITION pivot = Partition(arr, left_index, right_index);
             ExeWithSingleThread(arr, left_index, pivot-1, inter_num-1);
-            ExeWithSingleThread(arr, pivot, right_index, inter_num-1);
-        }
+            ExeWithSingleThread(arr, pivot+1, right_index, inter_num-1);
+        }else
+            BubbleSort(arr,left_index,right_index);
     }
 }
 void ExeWithMultiThread(DATATYPE * arr, POSITION left_index, POSITION right_index){
     //init the sem
     sem_init(&sem_main, 0, 0);
+
+    int length[15];
     for(int i=0; i<15; i++)
         sem_init(sem_arr+i, 0, 0);
     length[0] = right_index-left_index+1;
@@ -282,8 +293,8 @@ void * thread_function(void * args){
 
 POSITION Partition(DATATYPE *arr, POSITION left, POSITION right) {
     DATATYPE pivot = *(arr+right);
-    POSITION i = left-1;
-    POSITION j = left;
+    POSITION location = left-1;
+    /*
     while (j < right) {
         if (*(arr + j) <= pivot) {
             i++;
@@ -293,7 +304,15 @@ POSITION Partition(DATATYPE *arr, POSITION left, POSITION right) {
     }
     i++;
     Exchange(arr+i, arr+right);
-    return i;
+    */
+    for(POSITION i=left; i<right; i++)
+        if(*(arr+i)<pivot){
+            location++;
+            Exchange(arr+location, arr+i);
+        }
+    location++;
+    Exchange(arr+right, arr+location);
+    return location;
 }
 DATATYPE* LoadArrayFromFile(const char * filename, int * length){
     std::fstream file;
