@@ -80,7 +80,7 @@ void exec_FIFO_function(string filename, int num_frame, int* miss_count, int* hi
                 busy_page_queue.pop();
                 //task_map.erase(str_preDelete);      //删除
                 //cout<<"ERASE"<<str_preDelete<<endl;
-                task_map.erase(task_map.find(str_preDelete));
+                task_map.erase(str_preDelete);
             }
             *miss_count = *miss_count+1;
             //加入map，queue
