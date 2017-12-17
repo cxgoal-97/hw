@@ -66,7 +66,6 @@ string * get_argv(int argv_num, char * argv[]){
 
 void search_file(const string* argv_arr){
     string pathName = argv_arr[0];
-    struct stat buf;
     struct dirent *entry;
     if(pathName.empty()){   //如果路径为空，返回True
         printf("ERROR:路径为空。\n");
@@ -85,7 +84,9 @@ void search_file(const string* argv_arr){
         if(filename=="."||filename=="..")
             continue;
         //除开.和..，进行检查，包括目录。注意目录大小为本身的大小，不包含目录内文件的大小
-        stat(filename.c_str(), &buf);
+        struct stat buf;
+        lstat(filename.c_str(), &buf);
+
         //检查文件，判断其是否符合条件
         //以此检查inode, name, size_min, size_max.
         //其中inode,size_min,size_max是数字，其中size的单位是MB
@@ -96,7 +97,8 @@ void search_file(const string* argv_arr){
         if(!argv_arr[1].empty()){
             unsigned long inode;
             sscanf(argv_arr[1].c_str(), "%lu", &inode);
-            tag = (inode==buf.st_ino);
+            tag = (inode==entry->d_ino);
+            //buf.st_ino有问题
         }
         //检查文件名字
         if(tag&&!argv_arr[2].empty()){
@@ -126,8 +128,7 @@ void search_file(const string* argv_arr){
             answerPath.erase(0, pwd.size());
             //去掉answerPath前面的/
             answerPath.erase(0,1);
-
-            cout<<answerPath<<"\t\t"<<buf.st_ino<<"\t\t"<<buf.st_size/MBTOBYTE<<" MB"<<endl;
+            cout<<answerPath<<"\t\t"<<entry->d_ino<<"\t\t"<<buf.st_size/MBTOBYTE<<" MB"<<endl;
         }
         //判断是否为文件夹,如果是文件夹，则采取递归策略
         //构造递归函数的参数时，需要注意文件名之间的链接符
@@ -141,9 +142,11 @@ void search_file(const string* argv_arr){
             const string next_argv[ARGV_NUM] ={next_pathName, argv_arr[1],argv_arr[2],argv_arr[3],argv_arr[4]};
             search_file(next_argv);
         }
+
         else
             //printf("这不是文件夹");
             continue;
+
         //cout<<filename<<"   ";
         //cout<<"大小"<<buf.st_size<<"\t路径"<<pathName.c_str()<<entry->d_name<<"\n";
     }
