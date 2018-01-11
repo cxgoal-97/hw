@@ -8,10 +8,17 @@
 
 using namespace std;
 
-int main(){
-    string path_all;
-    printf("请输入挂载的地址\n");
-    cin>>path_all;
+int main(int argc, char **argv){
+    if(argc!=2){
+        cout<<argv[1];
+        return 0;
+    }
+    string path_all = argv[1];
+    //检查path_all 末尾是否有/，如果有就去掉
+    if(path_all[path_all.size()-1]=='/'){
+        path_all = path_all.substr(0, path_all.length()-1);
+    }
+
 
     struct timeval start,end;
     int sec=0, usec=0;
@@ -28,56 +35,33 @@ int main(){
 
         number = path_all+'/'+number+temp;
         FILE * file_pointer = fopen(number.c_str(), "w");
+        if(file_pointer == NULL){
+            cout<<"创建文件失败，请检查权限\n";
+            return 0;
+        }
 
         for(int i=0; i<loop_t; i++){
             if(fwrite(&a, sizeof(a), size, file_pointer)==0){
                 tag = 1;
-                cout<<"已满"<<endl;
                 break;
             }
         }
-        loop_t++;
-        if(loop_t==10)
-            loop_t = 1;
 
         if(tag)
             break;
-        //fsync(fileno(file_pointer));
-        //fflush(file_pointer);
         fclose(file_pointer);
-        //number = "rm "+number;
-        //system(number.c_str());
-        cout<<"当前循环"<<j<<endl;
     }
     sync();
-
-
-
-    /*
-    for(int i=0; i<300; i++){
-        if(fwrite(&a, sizeof(a), size, file_pointer)==0){
-            tag = 1;
-            cout<<"已满"<<endl;
-            break;
-        }
-    }
-    //fsync(fileno(file_pointer));
-    fclose(file_pointer);
-    //fclose(file_pointer);
-    //sync();
-    //number = "rm "+number;
-    //system(number.c_str());
-
-
-    sync();
-    system("filefrag -v largefile.txt");
-    */
 
     tag =0;
     for(int j=1;j<2000 ; j = j+2){
         sprintf(buffer, "%d", j);
         string number = buffer;
         number = path_all+'/'+number+temp;
+        /*小文件大小要求是powers of 2
+        if(j==1)
+            system(("ls -l "+ number).c_str());
+        */
         remove(number.c_str());
 
 
@@ -86,7 +70,7 @@ int main(){
         for(int i=0; i<j%10; i++){
             if(fwrite(&a, sizeof(a), size, file_pointer)==0){
                 tag = 1;
-                cout<<"已满"<<endl;
+                //cout<<"已满"<<endl;
                 break;
             }
         }
@@ -96,9 +80,6 @@ int main(){
         //fsync(fileno(file_pointer));
         //fflush(file_pointer);
         fclose(file_pointer);
-        //number = "rm "+number;
-        //system(number.c_str());
-        cout<<"largefile当前循环"<<j<<endl;
     }
 
 
@@ -107,33 +88,7 @@ int main(){
      *
     system("rm *9temp.txt");
     */
-    /*
-    tag = 0;
-    for(int j=0;j<200 ; j++){
 
-        FILE * file_pointer = fopen("largefile.txt", "a+");
-
-        if(file_pointer==NULL)
-            break;
-        for(int i=0; i<2; i++){
-            if(fwrite(&a, sizeof(a), size, file_pointer)==0){
-                tag = 1;
-                cout<<"已满"<<endl;
-                break;
-            }
-        }
-        if(tag)
-            break;
-        //fsync(fileno(file_pointer));
-        fclose(file_pointer);
-        //fclose(file_pointer);
-        //sync();
-        //number = "rm "+number;
-        //system(number.c_str());
-
-    }
-
-    */
     sync();
     string delete_path = "rm "+path_all+"/*temp.txt";
     system(delete_path.c_str());
